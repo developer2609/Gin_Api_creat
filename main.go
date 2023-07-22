@@ -1,119 +1,97 @@
 package main
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	// "errrors"
 )
 
-type book struct {
-	ID       string `json:"id"`
-	Title    string `json:"title"`
-	Author   string `json:"author"`
-	Quantity int    `json:"quantity"`
+type todo struct {
+	ID          string `json :"id"`
+	Title       string `json :"title"`
+	Describtion string `json :"description"`
 }
 
-var books = []book{
-	{ID: "1", Title: "In Search of Lost time ", Author: "MArcel Proust", Quantity: 2},
-	{ID: "2", Title: "The great GAtsby ", Author: "F.Scoot Fitzuuur", Quantity: 5},
-	{ID: "3", Title: "Titanic ", Author: "Jon byden", Quantity: 12},
+var todos = []todo{
+	{ID: "1", Title: "First todo", Describtion: "First todo Description"},
+	{ID: "2", Title: "Second todo", Describtion: "Second  todo Description"},
+	{ID: "3", Title: "Third  todo", Describtion: "Third todo Description"},
 }
 
-func getbooks(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, books)
+func getTodos(c *gin.Context) {
+	c.IndentedJSON(http.StatusOK, todos)
+
 }
 
-func BookById(c *gin.Context) {
+func getTodo(c *gin.Context) {
 	id := c.Param("id")
-	book, err := getBookByID(id)
 
-	if err != nil {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Book not found"})
-		return
-	}
-
-	c.IndentedJSON(http.StatusOK, book)
-}
-
-func creatBook(c *gin.Context) {
-	var newBook book
-
-	if err := c.BindJSON(&newBook); err != nil {
-		return
-
-	}
-
-	books = append(books, newBook)
-	c.IndentedJSON(http.StatusCreated, newBook)
-
-}
-
-func checkoutBook(c *gin.Context) {
-	id, ok := c.GetQuery("id")
-
-	if !ok {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Missing  id query params"})
-
-	}
-	book, err := getBookByID(id)
-
-	if err != nil {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Book not found"})
-		return
-
-	}
-
-	if book.Quantity <= 0 {
-
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Book not found"})
-		return
-	}
-
-	book.Quantity -= 1
-	c.IndentedJSON(http.StatusOK, book)
-}
-
-func returnBook(c *gin.Context) {
-	id, ok := c.GetQuery("id")
-
-	if !ok {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Missing  id query params"})
-
-	}
-	book, err := getBookByID(id)
-
-	if err != nil {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Book not found"})
-		return
-
-	}
-	book.Quantity += 1
-	c.IndentedJSON(http.StatusOK, book)
-
-}
-func getBookByID(id string) (*book, error) {
-
-	for i, b := range books {
-
-		if b.ID == id {
-			return &books[i], nil
+	for _, a := range todos {
+		if a.ID == id {
+			c.IndentedJSON(http.StatusOK, a)
+			return
 
 		}
 	}
 
-	return nil, errors.New("book not found")
+	c.IndentedJSON(http.StatusNotFound, gin.H{"msg": "Todo not found"})
 }
 
+func postTodo(c *gin.Context) {
+	var newTodo todo
+
+	if err := c.BindJSON(&newTodo); err != nil {
+		return
+
+	}
+
+	todos = append(todos, newTodo)
+
+	c.IndentedJSON(http.StatusCreated, newTodo)
+
+}
+
+func RemoveIndex(s []todo, index int) []todo {
+	return append(s[:index], s[index+1:]...)
+}
+
+func deleteTodo(c *gin.Context) {
+	id := c.Param("id")
+
+	for i, todo := range todos {
+		if todo.ID == id {
+			todos = RemoveIndex(todos, i)
+
+		}
+	}
+
+	c.IndentedJSON(http.StatusNotFound, gin.H{"msg": "Todo not found"})
+
+}
+
+func updateTodo(c *gin.Context) {
+	id := c.Param("id")
+	var updateData todo
+
+	if err := c.BindJSON(&updateData); err != nil {
+		return
+	}
+	for i, todo := range todos {
+		if todo.ID == id {
+			todos[i] = updateData
+			c.IndentedJSON(http.StatusOK, todos[i])
+			return
+		}
+	}
+	c.IndentedJSON(http.StatusNotFound, gin.H{"msg": "Todo NOT found"})
+}
 func main() {
 
-	router := gin.Default()
-	router.GET("/books", getbooks)
-	router.GET("/books/:id", BookById)
-	router.POST("/books", creatBook)
-	router.PATCH("checkout", checkoutBook)
-	router.PATCH("return", returnBook)
-	router.Run("localhost:8080")
-
+	r := gin.Default()
+	r.GET("/todos", getTodos)
+	r.GET("/todos/:id", getTodo)
+	r.POST("/todos/", postTodo)
+	r.DELETE("/todos/:id", deleteTodo)
+	r.PUT("/todos/:id/", updateTodo)
+	r.Run()
 }
